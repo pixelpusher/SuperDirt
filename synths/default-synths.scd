@@ -83,6 +83,8 @@ SynthDef(\dirac, { |out, sustain = 0.03, amp = 1, pan = 0|
 }).add;
 );
 
+);
+
 // sine wavy by obtuse pamplemousse
 (
 SynthDef(\sinetone, { |out, sustain = 0.1, note = 0, amp = 1, pan = 0, width = 0.5, speed = 60|
@@ -169,5 +171,25 @@ SynthDef(\laserbeam,{|out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan
 		DirtPan.ar(osc1*amp, ~dirt.numChannels, pan, ampenv)
 		//DirtPan.ar(sound, ~dirt.numChannels, pan, ampenv)
 	)
+}).add;
+);
+
+
+
+(
+// from bgold
+// vibraphone simulator, adapted with some help from Kevin Larke's thesis Real Time Vibraphone Pitch and Timbre Classification
+SynthDef(\supervibe, {|out, speed=1, sustain=1, decay=0, pan, freq, accelerate=0, velocity=1, modamp=1, modfreq=7.0 |
+	// most envelope shaping is done with XLines later, this envelope is just to clean up overall
+    var env = EnvGen.ar(Env.linen(0.001, 0.998, 0.001), timeScale:sustain, doneAction:2);
+    var sound, mod, freqs, hifreqs, decays;
+    freqs = freq * Line.kr(1, 1+accelerate, sustain) * [1, 4, 10, 13.75];
+    hifreqs = freq * Line.kr(1, 1+accelerate, sustain) * [19.2, 20, 21.2];
+    mod = SinOsc.kr(modfreq, Rand(0,2pi)).range(1-([0.5,0.3,0.3,0.5]*modamp),1);
+    sound = 0.3 * [1, 1.1*velocity, 0.6*velocity*velocity, 0.5*velocity] * SinOsc.ar(freqs);
+    decays = [1, 0.7*exp(-1.0*decay), 0.5*exp(-1.0*decay), 0.4*exp(-1.0*decay)]; // use `decay` to damp harmonics
+    sound = XLine.ar(1e-6, 1, 1/freqs) * XLine.ar(1, 1e-6, decays*4*sustain) * sound * mod; // main attacks and decays
+    sound = (XLine.ar(0.3*(velocity+1e-6),1e-6,0.02) * SinOsc.ar(hifreqs)).sum + sound.sum; // hi frequency onset
+    OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
 }).add;
 );
