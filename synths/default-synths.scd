@@ -75,3 +75,95 @@ SynthDef(\gabor, { |out, sustain = 0.03, note = 0, amp = 1, pan = 0, width = 0.3
 	)
 }).add;
 );
+
+
+// sine wavy by obtuse pamplemousse
+(
+SynthDef(\sinetone, { |out, sustain = 0.1, note = 0, amp = 1, pan = 0, width = 0.5, speed = 60|
+	var env, sound, freq, additiv1, additiv2, additiv3, additiv4, phase, basenote, slowsin1;
+
+	freq = (note + 0).midicps;
+	slowsin1 = SinOsc.ar(freq/(4*48),0,0.025);
+	basenote = 261.63*3; //middle
+
+	additiv1 = SinOsc.ar(freq, SinOsc.kr( speed*8 ).range(0,pi),  0.015); // cancels out at half phase!
+
+	additiv2 = SinOsc.ar(freq, slowsin1, 0.0275);
+
+	additiv4 = SinOsc.ar(freq/8, SinOsc.kr( speed/2).range(0,pi), 0.0475);
+
+	additiv3 = SinOsc.ar(freq/2, SinOsc.kr( speed*2).range(0.05,pi+0.05),  0.025);
+
+	//additiv1 = additiv1 + FreqShift.ar(additiv1, 0, SinOsc.kr(0.5).range(0,pi));
+
+	sound = Pan2.ar( additiv1 + additiv2 + additiv3 + additiv4 + slowsin1, 0);
+	//env = LFGauss.ar(sustain, width, loop: 0);
+
+	env = EnvGen.ar(Env.perc(0.002, sustain, amp * 0.1, -1), doneAction:2);
+
+	OffsetOut.ar(out,
+		DirtPan.ar(env * sound, ~dirt.numChannels, pan, amp)
+	)
+}).add;
+);
+
+(
+// mooger
+SynthDef(\ffmoog, { |out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan, accelerate, amp = 1, offset|
+	var env, sound, rate, phase, freq, modfreq;
+
+	env = EnvGen.ar(Env.perc(0.002, sustain, amp * 0.1, -1), doneAction:2);
+
+	freq = (note + 16).midicps;
+
+	amp = AmpCompA.kr(freq) * amp;
+
+	rate = speed + Sweep.kr(1, accelerate);
+
+	sound  = MoogFF.ar(
+
+		Mix(Saw.ar([0.99,1,1.01]*freq, amp)),
+
+		//MouseX.kr(100,20000,\exponential), // cutoff freq.
+		rate*20000,
+
+		MouseY.kr(0.1, 4.0, \linear) //gain
+
+		);
+
+
+	OffsetOut.ar(out,
+		DirtPan.ar(sound, ~dirt.numChannels, pan, env)
+	)
+}).add;
+);
+
+(
+//no use of gate, fixed length
+SynthDef(\laserbeam,{|out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan, accelerate, amp = 1, offset|
+
+	var osc1, freqenv, ampenv, freq, sound;
+
+	freq = speed*(note + 16).midicps;
+
+	amp = AmpCompA.kr(freq) * amp;
+
+	freqenv = EnvGen.ar(Env([4,0.5,1,1],[sustain,0.01,1.0]));
+
+	//freqenv = EnvGen.ar(Env([4,0.5,1,1],[0.05,0.01,1.0]));
+
+	osc1 = LFTri.ar(freq*freqenv);
+
+	//env = EnvGen.ar(Env.adsr(0.01,0.0,1.0,0.1),gate,doneAction:2);
+	//no gate, fixed envelope size
+	ampenv = EnvGen.ar(Env([0,1,0.5,0.0],[0.02,0.2,0.1]),doneAction:2);
+
+
+	OffsetOut.ar(out,
+		DirtPan.ar(osc1*amp, ~dirt.numChannels, pan, ampenv)
+		//DirtPan.ar(sound, ~dirt.numChannels, pan, ampenv)
+	)
+}).add;
+);
+
+
