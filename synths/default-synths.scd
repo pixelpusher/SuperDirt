@@ -193,3 +193,40 @@ SynthDef(\supervibe, {|out, speed=1, sustain=1, decay=0, pan, freq, accelerate=0
     OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
 }).add;
 );
+
+
+
+
+(
+SynthDef(\profit5,{|out=0 speed=1.0 accelerate = 0.33 freq = 440 velocity = 1.0 gate = 1 lforate = 10 lfowidth = 0.5 cutfreq = 12000 rq = 0.5 pan = 0.0 sustain = 0.25 up = 0|
+
+	var lfo, pulse, filter, clip, env, sound;
+
+	lfo = LFCub.kr(lforate*[1,1.01],Rand(0,0.5)!2);
+
+	pulse = PulseDPW.ar((freq+up)*speed*[1,1.01],lfo*lfowidth+0.5);
+
+	filter = RLPF.ar(pulse,cutfreq,rq);
+
+	//clip = Clip.ar (filter, lo: -0.95, hi: 0.95);
+
+	env = EnvGen.ar(Env.adsr(accelerate,0.0,0.95,sustain),gate,doneAction:2);
+
+	sound = Pan2.ar(Mix(filter)*env*velocity*0.25,pan);
+
+	OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
+}).add
+)
+
+
+// (
+// Pbind(
+// 	\instrument,\prophet5pwmstrings,
+// 	\midinote,Pseq([0,1,3,7,5,1,7,3]+64,inf),
+// 	\dur,Pseq((0.5!2) ++ (0.25!4) ++ (0.125!4),inf),
+// 	\lfowidth,Pn(Pseries(0.0,0.025,7),inf),
+// 	\lforate,Pn(Pseries(2,1,11),inf),
+// 	\cutoff, Pn(Pseries(400,12000,8),inf),
+// 	\rq,Pn(Pseries(0.4,0.1,5),inf)
+// ).play
+// )
