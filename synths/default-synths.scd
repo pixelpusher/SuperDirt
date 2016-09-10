@@ -198,7 +198,7 @@ SynthDef(\supervibe, {|out, speed=1, sustain=1, decay=0, pan, freq, accelerate=0
 
 
 (
-SynthDef(\profit5,{|out=0 speed=1.0 accelerate = 0.33 freq = 440 velocity = 1.0 gate = 1 lforate = 10 lfowidth = 0.5 cutfreq = 12000 rq = 0.5 pan = 0.0 sustain = 0.25 up = 0|
+SynthDef(\profit5,{|out=0 speed=1.0 accelerate = 0.1 freq = 440 velocity = 1.0 gate = 1 lforate = 10 lfowidth = 0.5 cutfreq = 12000 rq = 0.5 pan = 0.0 sustain = 0.25 up = 0|
 
 	var lfo, pulse, filter, clip, env, sound;
 
@@ -216,8 +216,7 @@ SynthDef(\profit5,{|out=0 speed=1.0 accelerate = 0.33 freq = 440 velocity = 1.0 
 
 	OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
 }).add
-)
-
+);
 
 // (
 // Pbind(
@@ -230,3 +229,47 @@ SynthDef(\profit5,{|out=0 speed=1.0 accelerate = 0.33 freq = 440 velocity = 1.0 
 // 	\rq,Pn(Pseries(0.4,0.1,5),inf)
 // ).play
 // )
+
+(
+//no use of gate, fixed length
+SynthDef(\moogbasstone,{|out= 0 speed = 1.0 accelerate = 0.1 freq = 440 velocity = 0.1 gate=1 cutfreq= 1000 gain=1.0 sustain = 0.01 pan=0.0 up = 0|
+
+	var osc, filter, env, filterenv, sound, env2, chorus;
+
+	//osc = Mix(VarSaw.ar(freq.lag(sustain)*[1.0,1.001,2.0],Rand(0.0,1.0)!3,Rand(0.5,0.75)!3,0.33));
+
+	//alternative: richer source: see moogbasstone2 below
+	osc = Mix(Pulse.ar(speed*(freq.lag(sustain)*[1.0,1.001,2.0]+up),Rand(0.45,0.5)!3,0.33));
+
+	filterenv = EnvGen.ar(Env.adsr(0.2,0.0,1.0,0.2),gate,doneAction:2);
+	filter =  MoogFF.ar(osc,cutfreq*(1.0+(0.5*filterenv)),gain);
+
+	env = EnvGen.ar(Env.adsr(0.001,0.3,0.9,0.2),gate,doneAction:2);
+
+	sound = Pan2.ar((0.7*filter+(0.3*filter.distort))*env*velocity*1.5,pan);
+
+	env2 = Linen.kr(gate, 0.1, 1, 0.1, 2);
+
+	chorus= Mix.fill(7, {
+		var maxdelaytime= rrand(0.005,0.02);
+
+		DelayC.ar(sound, maxdelaytime,LFNoise1.kr(Rand(4.5,10.5),0.25*maxdelaytime,0.75*maxdelaytime) )
+	});
+
+
+// with compression
+
+/*   chorus= Splay.ar(Array.fill(4,{
+		var maxdelaytime= rrand(0.005,0.02);
+
+		DelayC.ar(sound[0], maxdelaytime,LFNoise1.kr(Rand(0.1,0.6),0.25*maxdelaytime,0.75*maxdelaytime) )
+	}));
+
+	chorus = Compander.ar(4*(sound + chorus),sound,0.4,1,4);
+*/
+
+	OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
+
+}).add;
+);
+
