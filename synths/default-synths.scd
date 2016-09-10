@@ -117,12 +117,12 @@ SynthDef(\sinetone, { |out, sustain = 0.1, note = 0, amp = 1, pan = 0, width = 0
 
 (
 // mooger
-SynthDef(\ffmoog, { |out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan, accelerate, amp = 1, offset|
+SynthDef(\ffmoog, { |out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan, accelerate, amp = 1, offset=0,  up = 0|
 	var env, sound, rate, phase, freq, modfreq;
 
 	env = EnvGen.ar(Env.perc(0.002, sustain, amp * 0.1, -1), doneAction:2);
 
-	freq = (note + 16).midicps;
+	freq = (note + 16 + up).midicps;
 
 	amp = AmpCompA.kr(freq) * amp;
 
@@ -148,11 +148,11 @@ SynthDef(\ffmoog, { |out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan,
 
 (
 //no use of gate, fixed length
-SynthDef(\laserbeam,{|out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan, accelerate, amp = 1, offset|
+SynthDef(\laserbeam,{|out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan, accelerate, amp = 1, offset =0, up = 0|
 
 	var osc1, freqenv, ampenv, freq, sound;
 
-	freq = speed*(note + 16).midicps;
+	freq = speed*(note + 16 + up).midicps;
 
 	amp = AmpCompA.kr(freq) * amp;
 
@@ -179,10 +179,11 @@ SynthDef(\laserbeam,{|out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan
 (
 // from bgold
 // vibraphone simulator, adapted with some help from Kevin Larke's thesis Real Time Vibraphone Pitch and Timbre Classification
-SynthDef(\supervibe, {|out, speed=1, sustain=1, decay=0, pan, freq, accelerate=0, velocity=1, modamp=1, modfreq=7.0 |
+SynthDef(\supervibe, {|out, speed=1, sustain=1, decay=0, pan, freq, accelerate=0, velocity=1, modamp=1, modfreq=7.0  up = 0|
 	// most envelope shaping is done with XLines later, this envelope is just to clean up overall
     var env = EnvGen.ar(Env.linen(0.001, 0.998, 0.001), timeScale:sustain, doneAction:2);
     var sound, mod, freqs, hifreqs, decays;
+	freq = freq + up;
     freqs = freq * Line.kr(1, 1+accelerate, sustain) * [1, 4, 10, 13.75];
     hifreqs = freq * Line.kr(1, 1+accelerate, sustain) * [19.2, 20, 21.2];
     mod = SinOsc.kr(modfreq, Rand(0,2pi)).range(1-([0.5,0.3,0.3,0.5]*modamp),1);
@@ -202,9 +203,11 @@ SynthDef(\profit5,{|out=0 speed=1.0 accelerate = 0.33 freq = 440 velocity = 1.0 
 
 	var lfo, pulse, filter, clip, env, sound;
 
+	freq = freq + up;
+
 	lfo = LFCub.kr(lforate*[1,1.01],Rand(0,0.5)!2);
 
-	pulse = PulseDPW.ar((freq+up)*speed*[1,1.01],lfo*lfowidth+0.5);
+	pulse = PulseDPW.ar((freq)*speed*[1,1.01],lfo*lfowidth+0.5);
 
 	filter = RLPF.ar(pulse,cutfreq,rq);
 
