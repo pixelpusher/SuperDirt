@@ -117,20 +117,21 @@ SynthDef(\sinetone, { |out, sustain = 0.1, note = 0, amp = 1, pan = 0, width = 0
 
 (
 // mooger
-SynthDef(\ffmoog, { |out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan, accelerate, amp = 1, offset=0,  up = 0|
-	var env, sound, rate, phase, freq, modfreq;
+SynthDef(\ffmoog, { |out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan, accelerate=0.5, amp = 1, offset=0,  velocity=1 up = 0|
+	var env, env2, sound, rate, freq, modfreq;
 
 	env = EnvGen.ar(Env.perc(0.002, sustain, amp * 0.1, -1), doneAction:2);
 
-	freq = (note + 16 + up).midicps;
+	freq = (note + 12 + up).midicps;
+	freq = freq * speed;
 
-	amp = AmpCompA.kr(freq) * amp;
+	env2 = AmpCompA.kr(freq) * env2;
 
-	rate = speed + Sweep.kr(1, accelerate);
+	rate = velocity + Sweep.kr(1, accelerate);
 
 	sound  = MoogFF.ar(
 
-		Mix(Saw.ar([0.99,1,1.01]*freq, amp)),
+		Mix(Saw.ar([0.99,1,1.01]*freq, env2)),
 
 		//MouseX.kr(100,20000,\exponential), // cutoff freq.
 		rate*20000,
@@ -139,9 +140,8 @@ SynthDef(\ffmoog, { |out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan,
 
 		);
 
-
 	OffsetOut.ar(out,
-		DirtPan.ar(sound, ~dirt.numChannels, pan, env)
+		DirtPan.ar(env*sound, ~dirt.numChannels, pan, amp)
 	)
 }).add;
 );
@@ -152,7 +152,7 @@ SynthDef(\laserbeam,{|out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan
 
 	var osc1, freqenv, ampenv, freq, sound;
 
-	freq = speed*(note + 16 + up).midicps;
+	freq = speed*(note + 12 + up).midicps;
 
 	amp = AmpCompA.kr(freq) * amp;
 
@@ -275,4 +275,45 @@ SynthDef(\moogbasstone,{|out= 0 speed = 1.0 accelerate = 0.1 freq = 440 velocity
 
 }).add;
 );
+
+
+
+// hammond B3 sim
+// freq adjustments courtesy Tom Wiltshire (electricdruid.net)
+// drawbar settings selectable with "voice" and from many public domain sources,
+// Google "Hammond drawbar settings" and add your own in the big SelectX block
+// "perc" "percf" and "decay" are an attempt at the percussion, no idea if it sounds at all reasonable
+// vintage Hammonds had percf as 2 or 3 (switchable), two perc levels (maybe roughly 0.7 and 1.2?),
+// and two decay options (roughly 0 and maybe 1ish?)
+// "vibrato", "vrate", "perc", "percf" are all new params you'll need to define in Tidal if you want to change them
+SynthDef(\superhammond, {|out, speed=1, sustain=1, decay=0, pan, freq, vibrato=0.5, vrate=7,
+    voice=0, perc=0, percf=2 |
+    var freqs, amps, sound, click, env, ampscale, attrel;
+    attrel = (sustain/2).clip(0,0.005);
+    env = EnvGen.ar(Env.linen(attrel, sustain-(2*attrel), attrel), doneAction:2);
+    freqs = [0.5, 1.4988, 1, 2, 2.9976, 4, 5.0409, 5.9953, 8] * freq;
+    freqs = 2**(freqs < 63) * freqs; // fold up bottom register
+    freqs = freqs / (2**(freqs > 6000)); // fold down high harmonics
+    freqs = freqs / (2**(freqs > 6000)); // do it again for the really high notes
+    amps = SelectX.kr(voice, [
+        [1, 4, 5, 4, 3, 1, 0, 0, 0], // 0: bass violin 16'
+        [0, 0, 8, 0, 4, 0, 0, 0, 0], // 1: tibia 8'
+        [0, 7, 8, 1, 2, 0, 0, 0, 0], // 2: bassoon 8'
+        [0, 0, 7, 8, 8, 8, 8, 7, 2], // 3: french trumpet 8'
+        [4, 0, 5, 5, 4, 5, 3, 3, 6], // 4: string ensemble
+        [8, 8, 5, 3, 2, 4, 5, 8, 8], // 5: Blues
+        [8, 8, 8, 0 ,0, 0, 0, 0, 3], // 6: Jazz 1
+        [8, 8, 8, 8, 8, 8, 8, 8, 8], // 7: Full Shout
+        [8, 0, 0, 0, 0, 0, 8, 8, 8], // 8: Bro' Jack
+        [0, 0, 8, 8, 0, 0, 0, 0, 0]  // 9: Jazz 2
+    ]);
+    amps = amps - [0, 0, 0, 0, 0, 0, 0.5, 1, 1.5]; // damp brilliance a bit
+    amps = 2**(amps-8);
+    click = WhiteNoise.ar(1) * XLine.ar(1,1e-6, 0.1);
+    sound = 0.5 * Mix.ar( SinOsc.ar(freqs*(2*click+1), (2pi ! 9).rand, amps/amps.sum) );
+    sound = perc * 0.5 * SinOsc.ar(freq*percf, 2pi.rand) * XLine.ar(1,1e-6,2*decay+1) + sound;
+    sound = sound + BAllPass.ar(sound, 1000*LFTri.kr(vrate,0,vibrato/2,1));
+    OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
+}).add;
+
 

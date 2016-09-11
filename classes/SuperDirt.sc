@@ -286,7 +286,8 @@ DirtOrbit {
 		this.globalEffects = [
 			GlobalDirtEffect(\dirt_delay, [\delaytime, \delayfeedback, \delayAmp, \lock, \cps]),
 			GlobalDirtEffect(\dirt_reverb, [\size, \room, \dry]),
-			GlobalDirtEffect(\dirt_monitor, [\dirtOut])
+			GlobalDirtEffect(\dirt_monitor, [\dirtOut]),
+			GlobalDirtEffect(\dirt_leslie, [\leslie, \lrate, \lsize])
 		]
 	}
 
