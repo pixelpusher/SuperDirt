@@ -87,27 +87,25 @@ SynthDef(\dirac, { |out, sustain = 0.03, amp = 1, pan = 0|
 
 // sine wavy by obtuse pamplemousse
 (
-SynthDef(\sinetone, { |out, sustain = 0.1, note = 0, amp = 1, pan = 0, width = 0.5, speed = 60|
+SynthDef(\sinetone, { |out, sustain = 0.1, note = 0, amp = 1, pan = 0, width = 0.5, speed = 60 up =0|
 	var env, sound, freq, additiv1, additiv2, additiv3, additiv4, phase, basenote, slowsin1;
 
-	freq = (note + 0).midicps;
-	slowsin1 = SinOsc.ar(freq/(4*48),0,0.025);
-	basenote = 261.63*3; //middle
+	freq = (note + up).midicps;
+	slowsin1 = SinOsc.ar(freq/(4*48),0,0.5);
+	additiv1 = SinOsc.ar(freq, SinOsc.kr( speed*8 ).range(0,pi),  0.25); // cancels out at half phase!
 
-	additiv1 = SinOsc.ar(freq, SinOsc.kr( speed*8 ).range(0,pi),  0.015); // cancels out at half phase!
+	additiv2 = SinOsc.ar(freq, slowsin1, amp*0.775);
 
-	additiv2 = SinOsc.ar(freq, slowsin1, 0.0275);
+	additiv4 = SinOsc.ar(freq/8, SinOsc.kr( speed/2).range(0,pi), amp*0.4475);
 
-	additiv4 = SinOsc.ar(freq/8, SinOsc.kr( speed/2).range(0,pi), 0.0475);
-
-	additiv3 = SinOsc.ar(freq/2, SinOsc.kr( speed*2).range(0.05,pi+0.05),  0.025);
+	additiv3 = SinOsc.ar(freq/2, SinOsc.kr( speed*2).range(0.05,pi+0.05),  amp*0.525);
 
 	//additiv1 = additiv1 + FreqShift.ar(additiv1, 0, SinOsc.kr(0.5).range(0,pi));
 
 	sound = Pan2.ar( additiv1 + additiv2 + additiv3 + additiv4 + slowsin1, 0);
 	//env = LFGauss.ar(sustain, width, loop: 0);
 
-	env = EnvGen.ar(Env.perc(0.002, sustain, amp * 0.1, -1), doneAction:2);
+	env = EnvGen.ar(Env.perc(0.004, sustain, amp, -1), doneAction:2);
 
 	OffsetOut.ar(out,
 		DirtPan.ar(env * sound, ~dirt.numChannels, pan, amp)
@@ -115,17 +113,16 @@ SynthDef(\sinetone, { |out, sustain = 0.1, note = 0, amp = 1, pan = 0, width = 0
 }).add;
 );
 
-(
+/*(
 // mooger
 SynthDef(\ffmoog, { |out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan, accelerate=0.5, amp = 1, offset=0,  velocity=1 up = 0|
 	var env, env2, sound, rate, freq, modfreq;
 
 	env = EnvGen.ar(Env.perc(0.002, sustain, amp * 0.1, -1), doneAction:2);
 
-	freq = (note + 12 + up).midicps;
-	freq = freq * speed;
+	freq = speed*(note + 12 + up).midicps;
 
-	env2 = AmpCompA.kr(freq) * env2;
+	env2 = AmpCompA.kr(freq);
 
 	rate = velocity + Sweep.kr(1, accelerate);
 
@@ -144,7 +141,7 @@ SynthDef(\ffmoog, { |out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan,
 		DirtPan.ar(env*sound, ~dirt.numChannels, pan, amp)
 	)
 }).add;
-);
+);*/
 
 (
 //no use of gate, fixed length
