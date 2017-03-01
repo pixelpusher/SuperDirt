@@ -274,7 +274,7 @@ SynthDef(\moogbasstone,{|out= 0 speed = 1.0 accelerate = 0.1 freq = 440 velocity
 );
 
 
-
+(
 // hammond B3 sim
 // freq adjustments courtesy Tom Wiltshire (electricdruid.net)
 // drawbar settings selectable with "voice" and from many public domain sources,
@@ -284,11 +284,11 @@ SynthDef(\moogbasstone,{|out= 0 speed = 1.0 accelerate = 0.1 freq = 440 velocity
 // and two decay options (roughly 0 and maybe 1ish?)
 // "vibrato", "vrate", "perc", "percf" are all new params you'll need to define in Tidal if you want to change them
 SynthDef(\superhammond, {|out, speed=1, sustain=1, decay=0, pan, freq, vibrato=0.5, vrate=7,
-    voice=0, perc=0, percf=2 |
+    voice=0, perc=0, percf=2, up=0 |
     var freqs, amps, sound, click, env, ampscale, attrel;
     attrel = (sustain/2).clip(0,0.005);
     env = EnvGen.ar(Env.linen(attrel, sustain-(2*attrel), attrel), doneAction:2);
-    freqs = [0.5, 1.4988, 1, 2, 2.9976, 4, 5.0409, 5.9953, 8] * freq;
+	freqs = [0.5, 1.4988, 1, 2, 2.9976, 4, 5.0409, 5.9953, 8] * (freq + (up.midicps-0.midicps));
     freqs = 2**(freqs < 63) * freqs; // fold up bottom register
     freqs = freqs / (2**(freqs > 6000)); // fold down high harmonics
     freqs = freqs / (2**(freqs > 6000)); // do it again for the really high notes
@@ -312,5 +312,129 @@ SynthDef(\superhammond, {|out, speed=1, sustain=1, decay=0, pan, freq, vibrato=0
     sound = sound + BAllPass.ar(sound, 1000*LFTri.kr(vrate,0,vibrato/2,1));
     OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
 }).add;
+);
+
+(
+//
+// rough noise
+//
+SynthDef(\rough, {|out, speed=4, sustain=1, decay=0, pan, gate=1, freq, accelerate=0, velocity=0.8, modfreq=1.0  up = 0|
+    var sound, swr, son, sweep, trig, env;
+
+	// most envelope shaping is done with XLines later, this envelope is just to clean up overall
+    //env = EnvGen.ar(Env.adsr(0.2,0.0,1.0,0.2),gate,doneAction:2);
+
+	//perc (attackTime: 0.01, releaseTime: 1, level: 1, curve: -4)
+
+	env = EnvGen.kr(Env.perc(0.01, sustain, 0.8, -3), 1, doneAction:2);
+
+	//Env.perc(0.01, 1, 1, -3).test.plot;
+
+	freq = freq + up;
+
+	swr = freq*(1.499);
+	trig = Impulse.kr(speed);
+
+	sweep = LFTri.ar(swr).exprange(80, 2000);
+
+	son = LFSaw.ar(freq * [0.99, 1, 1.01]).sum;
+	son = LPF.ar(son, sweep);
+
+	son = son + BPF.ar(son, modfreq*(2*freq)*FSinOsc.kr(0.1,0.0,0.4), 0.5);
+
+	son = Normalizer.ar(son);
+
+	son = son + BPF.ar(son, 1500, 2);
+
+	son = RLPF.ar(son + SinOsc.ar(freq,0,LFTri.ar(swr,mul:2,add:1)).tanh, freq*4, 0.4);
+
+	//////// special flavours:
+	// hi manster
+	//son = Select.ar(TRand.kr(trig: trig) < 0.8, [son, HPF.ar(son, 2000) * 4]);
+	// sweep manster
+	//son = Select.ar(TRand.kr(trig: trig) < 0.5, [son, HPF.ar(son, sweep*0.5) * 4]);
+	// decimate
+	//son = Select.ar(TRand.kr(trig: trig) < 0.2, [son, son.round(0.2)]);
+
+	son = son + GVerb.ar(son, 9, 0.1, 0.7, mul: 0.1);
+	son = (son * 2).clip2;
+
+	// comment this out?
+	//son = 0.5*son + 0.7*RLPF.ar(son + SinOsc.ar(freq,0,LFTri.ar(swr,mul:2,add:1)).tanh, freqspeed *4, 0.4);
+
+	sound = FreeVerb.ar(((son*velocity)).tanh, 0.3, 0.65)*0.8;
+
+    OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
+}).add;
+);
 
 
+(
+//
+// another bass drum stolen from somewhere...
+// works best at freq 40 Hz or so
+//
+SynthDef(\bdsynth, {|out, speed=1, sustain=0.25, decay=0, pan, freq, gate=1, accelerate=0, velocity=2.5, modfreq=1.0  up = 0|
+	var sound, bd, sd, bassenv;
+
+	// funkier...
+	//bassenv = EnvGen.ar(Env.perc(0.001, sustain, 1, 0.2), 4, doneAction:2);
+
+	bassenv = Decay.ar(T2A.ar(Impulse.kr(0)),sustain*3);
+
+	freq = (freq + up.midicps)/12;
+
+	//bd = FreeVerb.ar( SinOsc.ar(freq+(bassenv**2*freq*modfreq*3),0,7*bassenv).clip2 + SinOsc.ar(freq+(bassenv**2*freq*modfreq),0,0.8*bassenv).clip2);
+
+	bd = FreeVerb.ar(SinOsc.ar(freq+(bassenv**2*freq),0,velocity*bassenv).clip2, 0.3, 0.5, 0.2);
+	sound = bd.tanh*1.5;
+	sound = FreeVerb.ar(sound, 0.3, 0.65);
+
+	OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, bassenv));
+}).add;
+);
+
+
+
+
+(
+//
+// another bass drum stolen from somewhere...
+// works best at freq 40 Hz or so
+//
+SynthDef(\dubby, {|out, speed=1, sustain=0.25, decay=0, pan, freq, gate=1, accelerate=0, velocity=2.5, modfreq=1.0  up = 0|
+	var sound, son, swr, sweep, sus;
+
+	//swr = Demand.kr(Impulse.kr(0), 0, Drand(sustain*[0.5, 1, 2, 3, 4, 6]));
+	sus = Select.kr(TRand.kr()*5, sustain*[0.5, 1, 2, 3, 4, 6]);
+	swr = Decay.kr(Impulse.kr(0),sus);
+	sweep = LFTri.ar(swr).exprange(40, 3000);
+
+	son = LFSaw.ar(freq * [0.99, 1, 1.01]).sum;
+	son = LPF.ar(son, sweep);
+	son = Normalizer.ar(son);
+	son = son + BPF.ar(son, 1500, 2);
+
+
+	//////// special flavours:
+	// hi manster
+
+	son = Select.ar(TRand.kr() < 0.4, [son, HPF.ar(son, 2000) * 4]);
+
+	// sweep manster
+
+	son = Select.ar(TRand.kr() < 0.5, [son, HPF.ar(son, sweep*0.5) * 4]);
+
+	// decimate
+	son = Select.ar(TRand.kr() < 0.2, [son, son.round(0.2)]);
+
+	son = son + GVerb.ar(son, 9, 0.1, 0.7, mul: 0.1);
+	son = (son * 2).clip2;
+
+	son = son*0.5 + 1.25*RLPF.ar(son + SinOsc.ar(freq,0,LFTri.ar(swr,mul:2,add:1)), freq*4, 0.8);
+
+	sound = FreeVerb.ar(((son*0.5)).tanh, 0.3, 0.65);
+
+	OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, swr));
+}).add;
+);
