@@ -369,6 +369,47 @@ SynthDef(\rough, {|out, speed=4, sustain=1, decay=0, pan, gate=1, freq, accelera
 );
 
 
+
+(
+//
+// rough noise
+//
+SynthDef(\rough2, {|out, speed=4, sustain=1, decay=0, pan, gate=1, freq, accelerate=0, velocity=0.8, modfreq=1500.0  up = 0|
+    var sound, swr, son, sweep, trig, env;
+
+	env = EnvGen.kr(Env.perc(0.01, sustain, 0.8, -3), 1, doneAction:2);
+
+	freq = freq + up;
+	swr = [0.5, 1, 2, 3, 4, 6].choose; // random number from list
+	sweep = LFTri.ar(swr).exprange(40, 3000);
+	son = Blip.ar(freq * swr * LFSaw.ar(freq * [0.99, 1, 1.01]), 200).sum;
+
+	son = LPF.ar(son, sweep);
+	son = Normalizer.ar(son);
+	son = son + BPF.ar(son, modfreq, 2); //arbitrary
+
+//////// special flavours:
+// hi manster
+son = Select.ar(TRand.kr(trig: env) < 0.4, [son, HPF.ar(son, 2000) * 4]);
+
+// sweep manster
+son = Select.ar(TRand.kr(trig: env) < 0.5, [son, HPF.ar(son, sweep*0.5) * 4]);
+
+// decimate
+son = Select.ar(TRand.kr(trig: env) < 0.2, [son, son.round(0.2)]);
+	son = son + GVerb.ar(son, 9, 0.1, 0.7, mul: 0.1);
+	son = (son * 2).clip2;
+
+	// comment this out?
+	//son = 0.5*son + 0.7*RLPF.ar(son + SinOsc.ar(freq,0,LFTri.ar(swr,mul:2,add:1)).tanh, freqspeed *4, 0.4);
+
+	sound = FreeVerb.ar(((son*velocity)).tanh, 0.3, 0.65)*0.8;
+
+    OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
+}).add;
+);
+
+
 (
 //
 // another bass drum stolen from somewhere...
@@ -387,7 +428,7 @@ SynthDef(\bdsynth, {|out, speed=1, sustain=0.25, decay=0, pan, freq, gate=1, acc
 	//bd = FreeVerb.ar( SinOsc.ar(freq+(bassenv**2*freq*modfreq*3),0,7*bassenv).clip2 + SinOsc.ar(freq+(bassenv**2*freq*modfreq),0,0.8*bassenv).clip2);
 
 	bd = FreeVerb.ar(SinOsc.ar(freq+(bassenv**2*freq),0,velocity*bassenv).clip2, 0.3, 0.5, 0.2);
-	sound = bd.tanh*1.5;
+	sound = bd.tanh*2;
 	sound = FreeVerb.ar(sound, 0.3, 0.65);
 
 	OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, bassenv));
@@ -405,12 +446,14 @@ SynthDef(\bdsynth, {|out, speed=1, sustain=0.25, decay=0, pan, freq, gate=1, acc
 SynthDef(\dubby, {|out, speed=1, sustain=0.25, decay=0, pan, freq, gate=1, accelerate=0, velocity=2.5, modfreq=1.0  up = 0|
 	var sound, son, swr, sweep, sus;
 
+	freq = (freq + up.midicps);
+
 	//swr = Demand.kr(Impulse.kr(0), 0, Drand(sustain*[0.5, 1, 2, 3, 4, 6]));
+	son = LFSaw.ar(freq * [0.99, 1, 1.01]).sum;
 	sus = Select.kr(TRand.kr()*5, sustain*[0.5, 1, 2, 3, 4, 6]);
 	swr = Decay.kr(Impulse.kr(0),sus);
 	sweep = LFTri.ar(swr).exprange(40, 3000);
 
-	son = LFSaw.ar(freq * [0.99, 1, 1.01]).sum;
 	son = LPF.ar(son, sweep);
 	son = Normalizer.ar(son);
 	son = son + BPF.ar(son, 1500, 2);
