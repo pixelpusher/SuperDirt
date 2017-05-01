@@ -232,7 +232,7 @@ SynthDef(\profit5,{|out=0 speed=1.0 accelerate = 0.1 freq = 440 velocity = 1.0 g
 
 (
 //no use of gate, fixed length
-SynthDef(\moogbasstone,{|out= 0 speed = 1.0 accelerate = 0.1 freq = 440 velocity = 0.1 gate=1 cutfreq= 1000 gain=1.0 sustain = 0.01 pan=0.0 up = 0|
+SynthDef(\moogbasstone,{|out= 0 speed = 1.0 accelerate = 0.1 freq = 440 velocity = 0.8 gate=1 cutfreq= 1000 gain=1.0 sustain = 0.01 pan=0.0 up = 0|
 
 	var osc, filter, env, filterenv, sound, env2, chorus;
 
@@ -248,7 +248,7 @@ SynthDef(\moogbasstone,{|out= 0 speed = 1.0 accelerate = 0.1 freq = 440 velocity
 
 	sound = Pan2.ar((0.7*filter+(0.3*filter.distort))*env*velocity*1.5,pan);
 
-	env2 = Linen.kr(gate, 0.1, 1, 0.1, 2);
+	env2 = Line.kr(gate, 0.1, 1, 0.1, 2);
 
 	chorus= Mix.fill(7, {
 		var maxdelaytime= rrand(0.005,0.02);
