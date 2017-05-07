@@ -1,13 +1,17 @@
 
 (
-SynthDef(\ChicagoPad2, { |out, note, note2=48, note3=44, cutoff=500, velocity = 0.2, gate=1, speed=1, sustain=0.8, decay=0, pan, begin=0, end=1, up = 0 |
+SynthDef(\ChicagoPad2, { |out, freq, note, note2=48, note3=44, cutfreq=500, velocity = 0.2, gate=1, speed=1, sustain=0.8, decay=0, pan, begin=0, end=1, up = 0 |
 
-    var freq,freq2,freq3,snd, env, envGen, line;
+    var freq2,freq3,snd, env, envGen, line;
 
 	decay = decay * 0.1;
-	freq = (note + up).midicps;
+	// freq = (note + up).midicps;
 	freq2 = (note2 + up).midicps;
 	freq3 = (note3 + up).midicps;
+
+	//freq = note;
+	//freq2 = note2;
+	//freq3 = note3;
 
 	freq = freq + SinOsc.kr(freq*1/2, 0, freq/2, 0);
 
@@ -21,7 +25,7 @@ SynthDef(\ChicagoPad2, { |out, note, note2=48, note3=44, cutoff=500, velocity = 
     snd = RLPF.ar(snd, SinOsc.kr([0.1,4.2], 0, [1700,480], [4000,700,5000])/[20.51,20], SinOsc.ar(0.1,1.5*pi)+1.05)/3;
     snd = Mix(snd);
 
-    snd = MoogFF.ar(snd, SinOsc.kr(0.08, 0.5, cutoff/10, cutoff), 3, 0);
+    snd = MoogFF.ar(snd, SinOsc.kr(0.08, 0.5, cutfreq/10, cutfreq), 3, 0);
 
 	line = Line.ar(begin, end, sustain, doneAction:2);
 	env = Env([0, 1, 0],[1,5], curve:2);

@@ -101,9 +101,7 @@ SynthDef(\gabor, { |out, sustain = 0.03, freq = 440, pan = 0, width = 0.3|
 // dirac delta function approximation
 (
 SynthDef(\dirac, { |out, sustain = 0.03, pan = 0|
-	OffsetOut.ar(out,
-<<<<<<< HEAD
-		DirtPan.ar(Impulse.ar(0), ~dirt.numChannels, pan, amp)
+	OffsetOut.ar(out, DirtPan.ar(Impulse.ar(0), ~dirt.numChannels, pan)
   )
 }).add;
 );
@@ -164,9 +162,6 @@ SynthDef(\ffmoog, { |out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan,
 
 	OffsetOut.ar(out,
 		DirtPan.ar(env*sound, ~dirt.numChannels, pan, amp)
-=======
-		DirtPan.ar(Impulse.ar(0), ~dirt.numChannels, pan)
->>>>>>> 2afd37ac745c380dd607a5bc68d0d46fb36491bd
 	)
 }).add;
 );*/
@@ -224,9 +219,9 @@ SynthDef(\supervibe, {|out, speed=1, sustain=1, decay=0, pan, freq, accelerate=0
 
 
 (
-SynthDef(\profit5,{|out=0 speed=1.0 accelerate = 0.1 freq = 440 velocity = 1.0 gate = 1 lforate = 10 lfowidth = 0.5 cutfreq = 12000 rq = 0.5 pan = 0.0 sustain = 0.25 up = 0|
+SynthDef(\profit5,{|out=0, speed=1.0, accelerate = 0.1, freq = 440, velocity = 1.0, begin=0, end=1, gate = 1, lforate = 10, lfowidth = 0.5, cutfreq = 12000, rq = 0.5, pan = 0.0, sustain = 0.25, up = 0|
 
-	var lfo, pulse, filter, clip, env, sound;
+	var lfo, pulse, filter, clip, env, line, envGen, sound;
 
 	freq = freq + up;
 
@@ -238,11 +233,15 @@ SynthDef(\profit5,{|out=0 speed=1.0 accelerate = 0.1 freq = 440 velocity = 1.0 g
 
 	//clip = Clip.ar (filter, lo: -0.95, hi: 0.95);
 
-	env = EnvGen.ar(Env.adsr(accelerate,0.0,0.95,sustain),gate,doneAction:2);
+	//env = EnvGen.ar(Env.adsr(accelerate,0.0,0.95,sustain),gate,doneAction:2);
 
-	sound = Pan2.ar(Mix(filter)*env*velocity*0.25,pan);
+	line = Line.ar(begin, end, sustain, doneAction:2);
+	env = Env([0, 1, 0],[1,5], curve:2);
+	envGen = IEnvGen.ar(env, line*env.times.sum*abs(speed));
 
-	OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
+	sound = Pan2.ar(Mix(filter)*envGen*velocity*0.25,pan);
+
+	OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, envGen));
 }).add
 );
 
@@ -260,21 +259,27 @@ SynthDef(\profit5,{|out=0 speed=1.0 accelerate = 0.1 freq = 440 velocity = 1.0 g
 
 (
 //no use of gate, fixed length
-SynthDef(\moogbasstone,{|out= 0 speed = 1.0 accelerate = 0.1 freq = 440 velocity = 0.8 gate=1 cutfreq= 1000 gain=1.0 sustain = 0.01 pan=0.0 up = 0|
+SynthDef(\moogbasstone,{|out= 0 speed = 1.0 accelerate = 0.1 freq = 440 begin=0 end=0 velocity = 0.8 gate=1 cutfreq= 1000 gain=1.0 sustain = 0.01 pan=0.0 up = 0|
 
-	var osc, filter, env, filterenv, sound, env2, chorus;
+	var osc, filter, env, filterenv, sound, envGen, line, env2, chorus;
 
 	//osc = Mix(VarSaw.ar(freq.lag(sustain)*[1.0,1.001,2.0],Rand(0.0,1.0)!3,Rand(0.5,0.75)!3,0.33));
 
 	//alternative: richer source: see moogbasstone2 below
 	osc = Mix(Pulse.ar(speed*(freq.lag(sustain)*[1.0,1.001,2.0]+up),Rand(0.45,0.5)!3,0.33));
+	env = Env([0, 1, 0],[1,5], curve:2);
+	line = Line.ar(begin, end, sustain, doneAction:2);
+	envGen = IEnvGen.ar(env, line*env.times.sum*abs(speed));
 
-	filterenv = EnvGen.ar(Env.adsr(0.2,0.0,1.0,0.2),gate,doneAction:2);
-	filter =  MoogFF.ar(osc,cutfreq*(1.0+(0.5*filterenv)),gain);
+//	filterenv = EnvGen.ar(Env.adsr(0.2,0.0,1.0,0.2),gate,doneAction:2);
 
-	env = EnvGen.ar(Env.adsr(0.001,0.3,0.9,0.2),gate,doneAction:2);
+	filter =  MoogFF.ar(osc,cutfreq*(1.0+(0.5*envGen)),gain);
 
-	sound = Pan2.ar((0.7*filter+(0.3*filter.distort))*env*velocity*1.5,pan);
+//	env = EnvGen.ar(Env.adsr(0.001,0.3,0.9,0.2),gate,doneAction:2);
+
+	//sound = Pan2.ar(Mix(filter)*envGen*velocity*0.25,pan);
+
+	sound = Pan2.ar((0.7*filter+(0.3*filter.distort))*envGen*velocity*1.5,pan);
 
 	env2 = Line.kr(gate, 0.1, 1, 0.1, 2);
 
@@ -295,8 +300,8 @@ SynthDef(\moogbasstone,{|out= 0 speed = 1.0 accelerate = 0.1 freq = 440 velocity
 
 	chorus = Compander.ar(4*(sound + chorus),sound,0.4,1,4);
 */
+	OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, envGen));
 
-	OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
 
 }).add;
 );
