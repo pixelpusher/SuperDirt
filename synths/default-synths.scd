@@ -266,7 +266,7 @@ SynthDef(\moogbasstone,{|out= 0 speed = 1.0 accelerate = 0.1 freq = 440 begin=0 
 	//osc = Mix(VarSaw.ar(freq.lag(sustain)*[1.0,1.001,2.0],Rand(0.0,1.0)!3,Rand(0.5,0.75)!3,0.33));
 
 	//alternative: richer source: see moogbasstone2 below
-	osc = Mix(Pulse.ar(speed*(freq.lag(sustain)*[1.0,1.001,2.0]+up),Rand(0.45,0.5)!3,0.33));
+	osc = Mix(Pulse.ar(freq.lag(sustain)*[1.0,1.001,2.0]),Rand(0.45,0.5)!3,0.33));
 	env = Env([0, 1, 0],[1,5], curve:2);
 	line = Line.ar(begin, end, sustain, doneAction:2);
 	envGen = IEnvGen.ar(env, line*env.times.sum*abs(speed));
