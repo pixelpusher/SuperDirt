@@ -57,8 +57,7 @@
 
 	// add envelope to lpf
 	~dirt.addModule('lpf',{ |dirtEvent| dirtEvent.sendSynth("dirt_lpf" ++ ~dirt.numChannels,
-		[cutoff: ~cutoff, resonance: ~resonance, out: ~out, fattack:~fattack, fhold:~fhold, frelease:~frelease,
-			fenv:~fenv, flfo:~flfo, flfof:~flfof])}, { ~cutoff.notNil });
+		[cutoff: ~cutoff, resonance: ~resonance, out: ~out, fattack:~fattack, fhold:~fhold, frelease:~frelease, fenv:~fenv, flfo:~flfo, flfof:~flfof])}, { ~cutoff.notNil });
 	SynthDef("dirt_lpf" ++ numChannels, { |out, cutoff = 440, resonance = 0, fattack=0, fhold=1, frelease=0, fenv=0, flfo,flfof,sustain|
 		var signal = In.ar(out, numChannels);
 		var env = Lag.ar(EnvGen.ar(Env.linen(fattack, fhold, frelease, 1, 0)), 0.01);

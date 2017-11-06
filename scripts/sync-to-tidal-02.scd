@@ -24,17 +24,43 @@ var quant = 1.0;
 
 
 
+MIDIClient.init;
+MIDIIn.connectAll;
+
 (
 SynthDef(\sinegrain,
     { | out=0, freq=440, sustain=0.05 |
         var env;
-        env = EnvGen.kr(Env.perc(0.01, sustain, 0.2), doneAction: Done.freeSelf);
+        env = EnvGen.kr(Env.perc(0.01, sustain, 0.2), doneAction: 2);
         Out.ar(out, SinOsc.ar(freq, 0.5pi, env))
     }).add;
+);
+
+(
+//remove old ones
+MIDIIn.removeFuncFrom(\noteOn, ~noteOn);
+MIDIIn.removeFuncFrom(\noteOff, ~noteOff);
 
 
-Pbind(\instrument, \sinegrain, \note, Pseq([6, [3, 5, 8], 2, 0], inf), \dur, 0.25).play(quant: 2);
-)
+~noteOn = {arg src, chan, num, vel;
+	"num: ".post;
+	num.postln;
+	~playing.stop;
+	~playing = Pbind(\instrument, \sinegrain, \note, Pseq([num, num+8], inf), \dur, (1/16)).play(quant: 0);
+};
+
+MIDIIn.addFuncTo(\noteOn, ~noteOn);
+
+~noteOff = { arg src,chan,num,vel;
+    //~playing.stop;
+	"stop!".postln;
+};
+
+MIDIIn.addFuncTo(\noteOff, ~noteOff);
+);
+
+// stop arpeggiator
+~playing.stop;
 
 
 // reset to normal:
@@ -43,3 +69,18 @@ Pbind(\instrument, \sinegrain, \note, Pseq([6, [3, 5, 8], 2, 0], inf), \dur, 0.2
 TempoClock.default.tempo = 1;
 )
 
+
+
+
+(
+MIDIIn.removeFuncFrom(\noteOn, ~noteOn);
+MIDIIn.removeFuncFrom(\noteOff, ~noteOff);
+MIDIIn.removeFuncFrom(\polytouch, ~polytouch);
+MIDIIn.removeFuncFrom(\control, ~control);
+MIDIIn.removeFuncFrom(\program, ~program);
+MIDIIn.removeFuncFrom(\touch, ~touch);
+MIDIIn.removeFuncFrom(\bend, ~bend);
+MIDIIn.removeFuncFrom(\sysex, ~sysex);
+MIDIIn.removeFuncFrom(\sysrt, ~sysrt);
+MIDIIn.removeFuncFrom(\smpte, ~smpte);
+)

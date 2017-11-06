@@ -10,6 +10,8 @@ They can be used in Tidal just as samples (ignoring the sample number, so instea
 If your SuperDirt instance is assigned to the variable ~dirt, you can livecode these synths.
 */
 
+~lastNote = 0; // for midi synths
+
 (
 
 // modulated band limited impulse
@@ -168,15 +170,16 @@ SynthDef(\ffmoog, { |out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan,
 
 (
 //no use of gate, fixed length
-SynthDef(\laserbeam,{|out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan, accelerate, amp = 1, offset =0, up = 0|
+SynthDef(\laserbeam,{|out, sustain = 1, freq, speed = 1, begin=0, end=1, pan, accelerate, amp = 1, offset =0, up = 0|
 
-	var osc1, freqenv, ampenv, freq, sound;
+	var osc1, freqenv, ampenv, sound;
 
-	freq = speed*(note + 12 + up).midicps;
+	//freq = speed*(note + 12 + up).midicps;
 
 	amp = AmpCompA.kr(freq) * amp;
 
-	freqenv = EnvGen.ar(Env([4,0.5,1,1],[sustain,0.01,1.0]));
+	//freqenv = EnvGen.ar(Env([4,0.5,1,1],[sustain,0.01,1.0]));
+	freqenv = EnvGen.ar(Env.linen(0.002, 0.996, 0.002, 1,-3), timeScale:sustain, doneAction:2);
 
 	//freqenv = EnvGen.ar(Env([4,0.5,1,1],[0.05,0.01,1.0]));
 
@@ -186,35 +189,20 @@ SynthDef(\laserbeam,{|out, sustain = 1, note = 0, speed = 1, begin=0, end=1, pan
 	//no gate, fixed envelope size
 	ampenv = EnvGen.ar(Env([0,1,0.5,0.0],[0.02,0.2,0.1]),doneAction:2);
 
+	sound  = osc1*amp;
+
+	sound = sound + BPF.ar(sound, 521, 0.8);
+
+	sound = RLPF.ar(sound, freq*2, 0.1);
+
+	sound = Normalizer.ar(sound);
 
 	OffsetOut.ar(out,
-		DirtPan.ar(osc1*amp, ~dirt.numChannels, pan, ampenv)
+		DirtPan.ar(sound, ~dirt.numChannels, pan, ampenv)
 		//DirtPan.ar(sound, ~dirt.numChannels, pan, ampenv)
 	)
 }).add;
 );
-
-
-
-(
-// from bgold
-// vibraphone simulator, adapted with some help from Kevin Larke's thesis Real Time Vibraphone Pitch and Timbre Classification
-SynthDef(\supervibe, {|out, speed=1, sustain=1, decay=0, pan, freq, accelerate=0, velocity=1, modamp=1, modfreq=7.0  up = 0|
-	// most envelope shaping is done with XLines later, this envelope is just to clean up overall
-    var env = EnvGen.ar(Env.linen(0.001, 0.998, 0.001), timeScale:sustain, doneAction:2);
-    var sound, mod, freqs, hifreqs, decays;
-	freq = freq + up;
-    freqs = freq * Line.kr(1, 1+accelerate, sustain) * [1, 4, 10, 13.75];
-    hifreqs = freq * Line.kr(1, 1+accelerate, sustain) * [19.2, 20, 21.2];
-    mod = SinOsc.kr(modfreq, Rand(0,2pi)).range(1-([0.5,0.3,0.3,0.5]*modamp),1);
-    sound = 0.3 * [1, 1.1*velocity, 0.6*velocity*velocity, 0.5*velocity] * SinOsc.ar(freqs);
-    decays = [1, 0.7*exp(-1.0*decay), 0.5*exp(-1.0*decay), 0.4*exp(-1.0*decay)]; // use `decay` to damp harmonics
-    sound = XLine.ar(1e-6, 1, 1/freqs) * XLine.ar(1, 1e-6, decays*4*sustain) * sound * mod; // main attacks and decays
-    sound = (XLine.ar(0.3*(velocity+1e-6),1e-6,0.02) * SinOsc.ar(hifreqs)).sum + sound.sum; // hi frequency onset
-    OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
-}).add;
-);
-
 
 
 
@@ -236,7 +224,7 @@ SynthDef(\profit5,{|out=0, speed=1.0, accelerate = 0.1, freq = 440, velocity = 1
 	//env = EnvGen.ar(Env.adsr(accelerate,0.0,0.95,sustain),gate,doneAction:2);
 
 	line = Line.ar(begin, end, sustain, doneAction:2);
-	env = Env([0, 1, 0],[1,5], curve:2);
+	env = Env([0, 1, 0],[0.2,5], curve:2);
 	envGen = IEnvGen.ar(env, line*env.times.sum*abs(speed));
 
 	sound = Pan2.ar(Mix(filter)*envGen*velocity*0.25,pan);
@@ -266,8 +254,8 @@ SynthDef(\moogbasstone,{|out= 0 speed = 1.0 accelerate = 0.1 freq = 440 begin=0 
 	//osc = Mix(VarSaw.ar(freq.lag(sustain)*[1.0,1.001,2.0],Rand(0.0,1.0)!3,Rand(0.5,0.75)!3,0.33));
 
 	//alternative: richer source: see moogbasstone2 below
-	osc = Mix(Pulse.ar(freq.lag(sustain)*[1.0,1.001,2.0]),Rand(0.45,0.5)!3,0.33));
-	env = Env([0, 1, 0],[1,5], curve:2);
+	osc = Mix(Pulse.ar(freq.lag(sustain)*[1.0,1.001,2.0]),Rand(0.45,0.5)!3,0.33);
+	env = Env([1, 1, 0],[0.1,5], curve:3);
 	line = Line.ar(begin, end, sustain, doneAction:2);
 	envGen = IEnvGen.ar(env, line*env.times.sum*abs(speed));
 
@@ -281,7 +269,7 @@ SynthDef(\moogbasstone,{|out= 0 speed = 1.0 accelerate = 0.1 freq = 440 begin=0 
 
 	sound = Pan2.ar((0.7*filter+(0.3*filter.distort))*envGen*velocity*1.5,pan);
 
-	env2 = Line.kr(gate, 0.1, 1, 0.1, 2);
+	//env2 = Line.kr(gate, 0.1, 1, 0.1, 2);
 
 	chorus= Mix.fill(7, {
 		var maxdelaytime= rrand(0.005,0.02);
@@ -292,60 +280,20 @@ SynthDef(\moogbasstone,{|out= 0 speed = 1.0 accelerate = 0.1 freq = 440 begin=0 
 
 // with compression
 
-/*   chorus= Splay.ar(Array.fill(4,{
+   chorus= Splay.ar(Array.fill(4,{
 		var maxdelaytime= rrand(0.005,0.02);
 
 		DelayC.ar(sound[0], maxdelaytime,LFNoise1.kr(Rand(0.1,0.6),0.25*maxdelaytime,0.75*maxdelaytime) )
 	}));
 
 	chorus = Compander.ar(4*(sound + chorus),sound,0.4,1,4);
-*/
+
 	OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, envGen));
 
 
 }).add;
 );
 
-
-(
-// hammond B3 sim
-// freq adjustments courtesy Tom Wiltshire (electricdruid.net)
-// drawbar settings selectable with "voice" and from many public domain sources,
-// Google "Hammond drawbar settings" and add your own in the big SelectX block
-// "perc" "percf" and "decay" are an attempt at the percussion, no idea if it sounds at all reasonable
-// vintage Hammonds had percf as 2 or 3 (switchable), two perc levels (maybe roughly 0.7 and 1.2?),
-// and two decay options (roughly 0 and maybe 1ish?)
-// "vibrato", "vrate", "perc", "percf" are all new params you'll need to define in Tidal if you want to change them
-SynthDef(\superhammond, {|out, speed=1, sustain=1, decay=0, pan, freq, vibrato=0.5, vrate=7,
-    voice=0, perc=0, percf=2, up=0 |
-    var freqs, amps, sound, click, env, ampscale, attrel;
-    attrel = (sustain/2).clip(0,0.005);
-    env = EnvGen.ar(Env.linen(attrel, sustain-(2*attrel), attrel), doneAction:2);
-	freqs = [0.5, 1.4988, 1, 2, 2.9976, 4, 5.0409, 5.9953, 8] * (freq + (up.midicps-0.midicps));
-    freqs = 2**(freqs < 63) * freqs; // fold up bottom register
-    freqs = freqs / (2**(freqs > 6000)); // fold down high harmonics
-    freqs = freqs / (2**(freqs > 6000)); // do it again for the really high notes
-    amps = SelectX.kr(voice, [
-        [1, 4, 5, 4, 3, 1, 0, 0, 0], // 0: bass violin 16'
-        [0, 0, 8, 0, 4, 0, 0, 0, 0], // 1: tibia 8'
-        [0, 7, 8, 1, 2, 0, 0, 0, 0], // 2: bassoon 8'
-        [0, 0, 7, 8, 8, 8, 8, 7, 2], // 3: french trumpet 8'
-        [4, 0, 5, 5, 4, 5, 3, 3, 6], // 4: string ensemble
-        [8, 8, 5, 3, 2, 4, 5, 8, 8], // 5: Blues
-        [8, 8, 8, 0 ,0, 0, 0, 0, 3], // 6: Jazz 1
-        [8, 8, 8, 8, 8, 8, 8, 8, 8], // 7: Full Shout
-        [8, 0, 0, 0, 0, 0, 8, 8, 8], // 8: Bro' Jack
-        [0, 0, 8, 8, 0, 0, 0, 0, 0]  // 9: Jazz 2
-    ]);
-    amps = amps - [0, 0, 0, 0, 0, 0, 0.5, 1, 1.5]; // damp brilliance a bit
-    amps = 2**(amps-8);
-    click = WhiteNoise.ar(1) * XLine.ar(1,1e-6, 0.1);
-    sound = 0.5 * Mix.ar( SinOsc.ar(freqs*(2*click+1), (2pi ! 9).rand, amps/amps.sum) );
-    sound = perc * 0.5 * SinOsc.ar(freq*percf, 2pi.rand) * XLine.ar(1,1e-6,2*decay+1) + sound;
-    sound = sound + BAllPass.ar(sound, 1000*LFTri.kr(vrate,0,vibrato/2,1));
-    OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, env));
-}).add;
-);
 
 (
 //
@@ -493,10 +441,10 @@ SynthDef(\bdsynth, {|out, speed=1, sustain=0.25, decay=0, pan, freq, gate=1, acc
 // another bass drum stolen from somewhere...
 // works best at freq 40 Hz or so
 //
-SynthDef(\dubby, {|out, speed=1, sustain=0.25, decay=0, pan, freq, gate=1, accelerate=0, velocity=2.5, modfreq=1.0  up = 0|
+SynthDef(\dubby, {|out, speed=1, sustain=0.25, pan, freq, gate=1, accelerate=0, up = 0|
 	var sound, son, swr, sweep, sus;
 
-	freq = (freq + up.midicps);
+	//freq = (freq + up.midicps);
 
 	//swr = Demand.kr(Impulse.kr(0), 0, Drand(sustain*[0.5, 1, 2, 3, 4, 6]));
 	son = LFSaw.ar(freq * [0.99, 1, 1.01]).sum;
