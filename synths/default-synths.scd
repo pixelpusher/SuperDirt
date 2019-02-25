@@ -479,3 +479,17 @@ SynthDef(\dubby, {|out, speed=1, sustain=0.25, pan, freq, gate=1, accelerate=0, 
 	OffsetOut.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, swr));
 }).add;
 );
+// debug a few time related values
+(
+SynthDef(\debug, { |begin = -1, end = -1, delta = -1, sustain = -1, unitDuration = -1, cycle = -1|
+	cycle.poll(Impulse.kr(0), label: "cycle");
+	begin.poll(Impulse.kr(0), label: "begin");
+	end.poll(Impulse.kr(0), label: "end");
+	delta.poll(Impulse.kr(0), label: "delta");
+	sustain.poll(Impulse.kr(0), label: "sustain");
+	unitDuration.poll(Impulse.kr(0), label: "unitDuration");
+	DC.kr(0).poll(Impulse.kr(0), label: "\n\n");
+}).add
+);
+
+)
