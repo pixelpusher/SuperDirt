@@ -94,4 +94,24 @@ SynthDef(\noisebuild, {
   var sound = HPF.ar(BPF.ar(WhiteNoise.ar()*envGen, 10+(20000*envGen), 0.8), 1000);
   Out.ar(out, DirtPan.ar(sound, ~dirt.numChannels, pan, envGen));
 }).add;
+
+
+// from bgold https://github.com/bgold-cosmos/SuperDirt-extra/blob/master/Tidal4.scd
+// maybe turn into a nice pad and rename
+SynthDef(\superdub5, {|out, sustain=1, pan, freq, accelerate=0, pitch1=4, voice=0,lfo=0|
+	var sound, basefreq, aenv, fenv, menv, ind, m1, m2, filtrange;
+	aenv = EnvGen.ar(Env.linen(0.05, 0.9, 0.05, 1, 'lin'), timeScale:sustain, doneAction:2);
+	menv = EnvGen.ar(Env.linen(0.3, 0.2, 0.5), timeScale:sustain);
+	basefreq = freq * Line.kr(1, 1+accelerate, sustain);
+	m1 = SinOsc.ar(basefreq*2) * basefreq/8;
+	m2 = SinOsc.ar(basefreq + m1*4) * basefreq*2 * menv;
+	sound = Splay.ar(VarSaw.ar(basefreq+m2 * [0.99,1,1.01], 0, 0.2*menv+0.1));
+	sound = (sound*(50*voice+5)).clip(-1,1)*0.5;
+	sound = HPF.ar(LeakDC.ar(sound), 60);
+	sound = 0.5*LFTri.ar(basefreq) + sound;
+	sound = sin(2*sound);
+	filtrange = clip(menv*basefreq*12+1200, 2, 20000);
+	sound = LPF.ar(sound, LFTri.kr(pitch1).range(filtrange*(1-lfo), filtrange));
+	OffsetOut.ar(out, DirtPan.ar(sound*aenv, ~dirt.numChannels, pan, 1))
+}).add;
 )
